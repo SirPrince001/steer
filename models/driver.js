@@ -11,6 +11,10 @@ let driverSchema = new Schema({
         type:String,
         required:true
     },
+    phone:{
+        type:String,
+        require:true
+    },
     email:{
         type:String,
         required:true,
