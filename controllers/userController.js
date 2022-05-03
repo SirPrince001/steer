@@ -1,5 +1,7 @@
 require("dotenv").config();
 const User = require("../models/user");
+const UserLocation = require("../models/userLocation");
+const request = require("request");
 const jwt = require("jsonwebtoken");
 const Bcrypt = require("bcryptjs");
 const Mongoose = require("mongoose");
@@ -15,14 +17,14 @@ exports.createUser = async (request, response) => {
       responseMessage: `User with this enail ${existingUser.email} already exist`,
     });
   } else {
-    let { firstname, lastname, password, email , phone } = request.body;
+    let { firstname, lastname, password, email, phone } = request.body;
     password = Bcrypt.hashSync(request.body.password, 10);
     let newUser = new User({
       firstname,
       lastname,
       password,
       email,
-      phone
+      phone,
     });
     let userData = await newUser.save();
     userData = userData.toJSON();
@@ -33,7 +35,7 @@ exports.createUser = async (request, response) => {
       firstname: userData.firstname,
       lastname: userData.lastname,
       email: userData.email,
-      phone:userData.phone
+      phone: userData.phone,
     };
 
     const userToken = jwt.sign(payload, process.env.SECRET);
@@ -80,7 +82,7 @@ exports.editUser = async (request, response) => {
       .status(422)
       .json({ success: false, responseMessage: `Invalid user id ${userId}` });
   try {
-        //get a user by id and update the data
+    //get a user by id and update the data
     let editedUser = await User.findByIdAndUpdate(
       { userId },
       { firstname, lastname, email, password, phone },
@@ -90,13 +92,32 @@ exports.editUser = async (request, response) => {
       .status(200)
       .json({ success: true, responseMessage: editedUser });
   } catch (error) {
-    return responseMessage
-      .status(422)
-      .json({
-        success: false,
-        responseMessage: `Unable to get a user due to this error ${error.message}`,
-      });
+    return responseMessage.status(422).json({
+      success: false,
+      responseMessage: `Unable to get a user due to this error ${error.message}`,
+    });
   }
+};
 
+// locate user for pick up
+exports.findUserForPickUp = function (request, response) {
+  let api_key = process.env.API_KEY;
+  let base_url = process.env.BASE_URL;
+  let { address } = request.body.address;
+  let url = base_url + address + "&key=" + api_key;
 
+  request(url, function(error, body) {
+    if (!error && response.status == 200) {
+      console.log(body);
+      return response.json({
+        success: true,
+        responseMessage: body,
+      });
+    } else {
+      return response.status(422).json({
+        success: false,
+        responseMessage: `Cannot loaction use this address ${address}`,
+      });
+    }
+  });
 };
