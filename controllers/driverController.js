@@ -3,6 +3,7 @@ const Driver = require("../models/driver");
 const jwt = require("jsonwebtoken");
 const Bcrypt = require("bcryptjs");
 const Mongoose = require("mongoose");
+const { default: axios } = require("axios");
 
 //create new driver
 exports.createDriver = async (request, response) => {
@@ -85,5 +86,44 @@ exports.loginDriver = async (request, response) => {
         success: false,
         responseMessage: `Unable to login user with this email ${driverEmail.email}`,
       });
+  }
+};
+
+// callback function
+function callback(message, obj) {
+  let resp = {
+    message,
+    data: obj !== undefined ? obj : null
+  };
+
+  return console.log(resp);
+};
+
+exports.getUserRideRequestLocation = async (req,res) => {
+  const { request_address } = req.query;
+
+  if(request_address === undefined ) {
+    res.json({message: "Address should be provided"})
+  }
+
+  // process request
+  try {
+
+    const geoCodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${request_address}&key=${process.env.API_KEY}`;
+  
+    axios.get(geoCodeUrl, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    })
+    .then(data => {
+      let resp = data.data.results !== undefined && data.data.results.length > 0 ? data.data.results : null;
+      callback('location response', resp);
+    })
+    .catch(e => {
+      callback('An error occured while getting location', e);
+    });
+  } catch(e) {
+    callback('An error occured on our end, internal error', e);
   }
 };
